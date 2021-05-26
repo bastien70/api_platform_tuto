@@ -1,6 +1,6 @@
 <?php
 
-namespace App\General\Security\Voter;
+namespace App\Security\Voter;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\NullToken;
