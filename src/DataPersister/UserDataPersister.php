@@ -4,16 +4,24 @@
 namespace App\DataPersister;
 
 
+use ApiPlatform\Core\DataPersister\ContextAwareDataPersisterInterface;
 use ApiPlatform\Core\DataPersister\DataPersisterInterface;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Component\Security\Core\Security;
 
-class UserDataPersister implements DataPersisterInterface
+class UserDataPersister implements ContextAwareDataPersisterInterface
 {
-    public function __construct(private EntityManagerInterface $manager, private UserPasswordEncoderInterface $encoder){}
+    public function __construct(
+        private DataPersisterInterface $decoratedDataPersister,
+        private UserPasswordEncoderInterface $encoder,
+        private LoggerInterface $logger,
+        private Security $security
+    ){}
 
-    public function supports($data): bool
+    public function supports($data, array $context = []): bool
     {
         return $data instanceof User;
     }
@@ -21,19 +29,34 @@ class UserDataPersister implements DataPersisterInterface
     /**
      * @param User $data
      */
-    public function persist($data)
+    public function persist($data, array $context = [])
     {
+        if(($context['item_operation_name'] ?? null) === 'put')
+        {
+            $this->logger->info(sprintf('User %s is being updated', $data->getId()));
+        }
+
+        if(!$data->getId())
+        {
+            // take any actions needed for a new user
+            // send registration email
+            // integrate into some CRM or payment system
+            $this->logger->info(sprintf('User %s just registred! Eureka!', $data->getEmail()));
+        }
+
         if($data->getPlainPassword()) {
             $data->setPassword($this->encoder->encodePassword($data, $data->getPlainPassword()));
             $data->eraseCredentials();
         }
-        $this->manager->persist($data);
-        $this->manager->flush();
+
+        // now handled in listener
+//        $data->setIsMe($this->security->getUser() === $data);
+
+        $this->decoratedDataPersister->persist($data);
     }
 
-    public function remove($data)
+    public function remove($data, array $context = [])
     {
-        $this->manager->remove($data);
-        $this->manager->flush();
+        $this->decoratedDataPersister->remove($data);
     }
 }

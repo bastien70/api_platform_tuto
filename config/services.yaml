@@ -34,8 +34,26 @@ services:
         decorates: 'api_platform.serializer.context_builder'
         arguments: [ '@App\Serializer\AdminGroupsContextBuilder.inner' ]
 
-    App\ApiPlatform\AutoGroupResourceMetadataFactory:
-        decorates: 'api_platform.metadata.resource.metadata_factory'
-        arguments: [ '@App\ApiPlatform\AutoGroupResourceMetadataFactory.inner' ]
-        decoration_priority: -20
+#    App\ApiPlatform\AutoGroupResourceMetadataFactory:
+#        decorates: 'api_platform.metadata.resource.metadata_factory'
+#        arguments: [ '@App\ApiPlatform\AutoGroupResourceMetadataFactory.inner' ]
+#        decoration_priority: -20
 
+    App\Doctrine\CheeseListingSetOwnerListener:
+        tags: ['doctrine.orm.entity_listener']
+
+    App\Doctrine\UserSetIsMvpListener:
+        tags: [ 'doctrine.orm.entity_listener' ]
+
+    App\DataPersister\UserDataPersister:
+        bind:
+            $decoratedDataPersister: '@api_platform.doctrine.orm.data_persister'
+
+    App\DataPersister\CheeseListingDataPersister:
+        bind:
+            $decoratedDataPersister: '@api_platform.doctrine.orm.data_persister'
+
+    App\DataProvider\UserDataProvider:
+        bind:
+            $collectionDataProvider: '@api_platform.doctrine.orm.default.collection_data_provider'
+            $itemDataProvider: '@api_platform.doctrine.orm.default.item_data_provider'

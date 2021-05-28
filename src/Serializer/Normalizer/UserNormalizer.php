@@ -3,44 +3,59 @@
 namespace App\Serializer\Normalizer;
 
 use App\Entity\User;
+use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Serializer\Normalizer\CacheableSupportsMethodInterface;
-use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Normalizer\ContextAwareNormalizerInterface;
+use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
+use Symfony\Component\Serializer\Normalizer\NormalizerAwareTrait;
 
-class UserNormalizer implements NormalizerInterface, CacheableSupportsMethodInterface
+class UserNormalizer implements ContextAwareNormalizerInterface, CacheableSupportsMethodInterface, NormalizerAwareInterface
 {
+    use NormalizerAwareTrait;
 
-    public function __construct(private ObjectNormalizer $normalizer){}
+    private const ALREADY_CALLED = 'USER_NORMALIZER_ALREADY_CALLED';
+
+    public function __construct(private Security $security){}
 
     /**
      * @param User $object
      */
     public function normalize($object, $format = null, array $context = []): array
     {
-        if($this->userIsOwner($object)) {
+        $isOwner = $this->userIsOwner($object);
+        if ($isOwner) {
             $context['groups'][] = 'owner:read';
         }
 
-        $data = $this->normalizer->normalize($object, $format, $context);
+        $context[self::ALREADY_CALLED] = true;
 
-        // Here: add, edit, or delete some data
-
-        return $data;
+        return $this->normalizer->normalize($object, $format, $context);
     }
 
-    public function supportsNormalization($data, $format = null): bool
+    public function supportsNormalization($data, $format = null, array $context = []): bool
     {
+        if(isset($context[self::ALREADY_CALLED]))
+        {
+            return false;
+        }
+
         return $data instanceof User;
     }
 
     public function hasCacheableSupportsMethod(): bool
     {
-        return true;
+        return false;
     }
 
-    private function userIsOwner(User $object): bool
+    private function userIsOwner(User $user): bool
     {
-        return true;
-        return random_int(0, 10) > 5;
+        /** @var User|null $authenticatedUser */
+        $authenticatedUser = $this->security->getUser();
+
+        if (!$authenticatedUser) {
+            return false;
+        }
+
+        return $authenticatedUser->getEmail() === $user->getEmail();
     }
 }

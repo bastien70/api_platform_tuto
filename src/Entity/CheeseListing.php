@@ -8,6 +8,7 @@ use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\BooleanFilter;
 use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\RangeFilter;
 use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\SearchFilter;
 use ApiPlatform\Core\Serializer\Filter\PropertyFilter;
+use App\ApiPlatform\CheeseSearchFilter;
 use App\Repository\CheeseListingRepository;
 use Carbon\Carbon;
 use Doctrine\ORM\Mapping as ORM;
@@ -16,16 +17,22 @@ use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Valid;
+use App\Validator as App;
 
 /**
  * @ORM\Entity(repositoryClass=CheeseListingRepository::class)
+ * @ORM\EntityListeners({"App\Doctrine\CheeseListingSetOwnerListener"})
+ * @App\ValidIsPublished()
  */
 #[
     ApiResource(
         collectionOperations: [
             'get',
             'post' => [
-                'security' => "is_granted('ROLE_USER')"
+                'security' => "is_granted('ROLE_USER')",
+                'denormalization_context' => [
+                    'groups' => ['cheese:write', 'cheese:collection:post']
+                ]
             ],
         ],
         itemOperations: [
@@ -43,10 +50,12 @@ use Symfony\Component\Validator\Constraints\Valid;
             ],
         ],
         shortName: 'cheese',
+        denormalizationContext: ['groups' => ['cheese:write']],
         formats: [
             'jsonld', 'json', 'html', 'jsonhal',
             'csv' => ['text/csv']
         ],
+        normalizationContext: ['groups' => ['cheese:read']],
         paginationItemsPerPage: 10
     ),
     ApiFilter(BooleanFilter::class, properties: ['isPublished']),
@@ -57,7 +66,11 @@ use Symfony\Component\Validator\Constraints\Valid;
         'owner.username' => 'partial'
     ]),
     ApiFilter(RangeFilter::class, properties: ['price']),
-    ApiFilter(PropertyFilter::class)
+    ApiFilter(PropertyFilter::class),
+    ApiFilter(
+        CheeseSearchFilter::class,
+        arguments: ['useLike' => true]
+    )
 ]
 class CheeseListing
 {
@@ -109,15 +122,16 @@ class CheeseListing
     /**
      * @ORM\Column(type="boolean")
      */
+    #[Groups(['cheese:write'])]
     private $isPublished = false;
 
     /**
      * @ORM\ManyToOne(targetEntity=User::class, inversedBy="cheeseListings")
      * @ORM\JoinColumn(nullable=false)
+     * @App\IsValidOwner()
      */
     #[
-        Groups(['cheese:read', 'cheese:write']),
-        Valid()
+        Groups(['cheese:read', 'cheese:collection:post']),
     ]
     private $owner;
 
@@ -147,7 +161,7 @@ class CheeseListing
     #[Groups(['cheese:read'])]
     public function getShortDescription(): ?string
     {
-        if(strlen($this->description) > 40)
+        if(strlen($this->description) < 40)
         {
             return $this->description;
         }

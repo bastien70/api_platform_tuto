@@ -16,9 +16,11 @@ use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Valid;
+use App\Doctrine\UserSetIsMvpListener;
 
 /**
  * @ORM\Entity(repositoryClass=UserRepository::class)
+ * @ORM\EntityListeners({UserSetIsMvpListener::class})
  */
 #[
     ApiResource(
@@ -68,7 +70,7 @@ class User implements UserInterface
     /**
      * @ORM\Column(type="json")
      */
-    #[Groups(['admin:write'])]
+    #[Groups(['admin:write', 'admin:read'])]
     private $roles = [];
 
     #[
@@ -90,7 +92,7 @@ class User implements UserInterface
      * @ORM\Column(type="string", length=255, unique=true)
      */
     #[
-        Groups(['user:read', 'user:write', 'cheese:item:get', 'cheese:write']),
+        Groups(['user:read', 'user:write', 'cheese:item:get']),
         NotBlank()
     ]
     private $username;
@@ -99,7 +101,7 @@ class User implements UserInterface
      * @ORM\OneToMany(targetEntity=CheeseListing::class, mappedBy="owner", cascade="persist", orphanRemoval=true)
      */
     #[
-        Groups(['user:read', 'user:write']),
+        Groups(['user:write']),
         Valid()
     ]
     private $cheeseListings;
@@ -111,6 +113,18 @@ class User implements UserInterface
         Groups(['admin:read', 'owner:read', 'user:write']),
     ]
     private $phoneNumber;
+
+    /**
+     * Returns true if this is the currently-authenticated user
+     */
+    #[Groups(['user:read'])]
+    private $isMe = false;
+
+    /**
+     * Returns true if this user is an MVP
+     */
+    #[Groups(['user:read'])]
+    private $isMvp = false;
 
     public function __construct()
     {
@@ -213,6 +227,20 @@ class User implements UserInterface
         return $this->cheeseListings;
     }
 
+    /**
+     * @return Collection<CheeseListing>
+     */
+    #[
+        Groups(['user:read']),
+        SerializedName('cheeseListings')
+    ]
+    public function getPublishedCheeseListings(): Collection
+    {
+        return $this->cheeseListings->filter(function (CheeseListing $cheeseListing){
+            return $cheeseListing->getIsPublished();
+        });
+    }
+
     public function addCheeseListing(CheeseListing $cheeseListing): self
     {
         if (!$this->cheeseListings->contains($cheeseListing)) {
@@ -263,5 +291,33 @@ class User implements UserInterface
         $this->phoneNumber = $phoneNumber;
 
         return $this;
+    }
+
+    public function getIsMe(): bool
+    {
+        return $this->isMe;
+    }
+
+    public function setIsMe(bool $isMe): self
+    {
+        $this->isMe = $isMe;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getIsMvp(): bool
+    {
+        return $this->isMvp;
+    }
+
+    /**
+     * @param bool $isMvp
+     */
+    public function setIsMvp(bool $isMvp): void
+    {
+        $this->isMvp = $isMvp;
     }
 }
