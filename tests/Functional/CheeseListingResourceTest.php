@@ -44,14 +44,14 @@ class CheeseListingResourceTest extends CustomApiTestCase
         self::assertResponseStatusCodeSame(201);
 
         $client->request('POST', '/api/cheeses', [
-            'json' => $cheesyData + ['owner' => '/api/users/'.$otherUser->getId()]
+            'json' => $cheesyData + ['owner' => '/api/users/'.$otherUser->getUuid()]
         ]);
 
         // si ça marche pas c'est error 400
         self::assertResponseStatusCodeSame(422, 'not passing the correct owner');
 
         $client->request('POST', '/api/cheeses', [
-            'json' => $cheesyData + ['owner' => '/api/users/'.$authenticatedUser->getId()]
+            'json' => $cheesyData + ['owner' => '/api/users/'.$authenticatedUser->getUuid()]
         ]);
 
         self::assertResponseStatusCodeSame(201);
@@ -73,7 +73,7 @@ class CheeseListingResourceTest extends CustomApiTestCase
             // try to trick security by reassigning to this user
             'json' => [
                 'title' => 'updated',
-                'owner' => '/api/users/'.$user2->getId()
+                'owner' => '/api/users/'.$user2->getUuid()
             ]
         ]);
 
@@ -198,7 +198,7 @@ class CheeseListingResourceTest extends CustomApiTestCase
                 'title' => 'cheese2',
                 'description' => 'cheese',
                 'price' => 1000,
-                'owner' => '/api/users/' . $user->getId(),
+                'owner' => '/api/users/' . $user->getUuid(),
                 'shortDescription' => 'cheese',
                 'createdAtAgo' => '1 second ago',
             ]
@@ -218,7 +218,7 @@ class CheeseListingResourceTest extends CustomApiTestCase
 
         self::assertResponseStatusCodeSame(404);
 
-        $response = $client->request('GET', '/api/users/'.$otherUser->getId());
+        $response = $client->request('GET', '/api/users/'.$otherUser->getUuid());
         $data = $response->toArray();
         $this->assertEmpty($data['cheeseListings']);
     }

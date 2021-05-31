@@ -9,11 +9,10 @@ use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\RangeFilter;
 use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\SearchFilter;
 use ApiPlatform\Core\Serializer\Filter\PropertyFilter;
 use App\ApiPlatform\CheeseSearchFilter;
+use App\Dto\CheeseListingInput;
+use App\Dto\CheeseListingOutput;
 use App\Repository\CheeseListingRepository;
-use Carbon\Carbon;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Valid;
@@ -55,7 +54,9 @@ use App\Validator as App;
             'jsonld', 'json', 'html', 'jsonhal',
             'csv' => ['text/csv']
         ],
+        input: CheeseListingInput::class,
         normalizationContext: ['groups' => ['cheese:read']],
+        output: CheeseListingOutput::class,
         paginationItemsPerPage: 10
     ),
     ApiFilter(BooleanFilter::class, properties: ['isPublished']),
@@ -84,34 +85,16 @@ class CheeseListing
     /**
      * @ORM\Column(type="string", length=255)
      */
-    #[
-        Groups(['cheese:read', 'cheese:write', 'user:read', 'user:write']),
-        NotBlank(),
-        Length(
-            min: 2,
-            max: 50,
-            minMessage: 'Describe your cheese in 2 chars or more',
-            maxMessage: 'Describe your cheese in 50 chars or less',
-        )
-    ]
     private $title;
 
     /**
      * @ORM\Column(type="text")
      */
-    #[
-        Groups(['cheese:read']),
-        NotBlank(),
-    ]
     private $description;
 
     /**
      * @ORM\Column(type="integer")
      */
-    #[
-        Groups(['cheese:read', 'cheese:write', 'user:read', 'user:write']),
-        NotBlank(),
-    ]
     private $price;
 
     /**
@@ -122,17 +105,12 @@ class CheeseListing
     /**
      * @ORM\Column(type="boolean")
      */
-    #[Groups(['cheese:write'])]
     private $isPublished = false;
 
     /**
      * @ORM\ManyToOne(targetEntity=User::class, inversedBy="cheeseListings")
      * @ORM\JoinColumn(nullable=false)
-     * @App\IsValidOwner()
      */
-    #[
-        Groups(['cheese:read', 'cheese:collection:post']),
-    ]
     private $owner;
 
     public function __construct(string $title = null)
@@ -158,17 +136,6 @@ class CheeseListing
 //        return $this;
 //    }
 
-    #[Groups(['cheese:read'])]
-    public function getShortDescription(): ?string
-    {
-        if(strlen($this->description) < 40)
-        {
-            return $this->description;
-        }
-
-        return substr($this->description, 0, 40). '...';
-    }
-
     public function getDescription(): ?string
     {
         return $this->description;
@@ -177,22 +144,6 @@ class CheeseListing
     public function setDescription(string $description): self
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    /**
-     * The description of the cheese as raw text.
-     * @param string $description
-     * @return $this
-     */
-    #[
-        Groups(['cheese:write', 'user:write']),
-        SerializedName('description')
-    ]
-    public function setTextDescription(string $description): self
-    {
-        $this->description = nl2br($description);
 
         return $this;
     }
@@ -219,16 +170,6 @@ class CheeseListing
         $this->createdAt = $createdAt;
 
         return $this;
-    }
-
-    /**
-     * How long in text that this cheese listing wad added.
-     * @return string
-     */
-    #[Groups(['cheese:read'])]
-    public function getCreatedAtAgo(): string
-    {
-        return Carbon::instance($this->createdAt)->diffForHumans();
     }
 
     public function getIsPublished(): ?bool

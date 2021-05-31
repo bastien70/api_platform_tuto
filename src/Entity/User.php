@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiFilter;
+use ApiPlatform\Core\Annotation\ApiProperty;
 use ApiPlatform\Core\Annotation\ApiResource;
 use ApiPlatform\Core\Serializer\Filter\PropertyFilter;
 use App\Repository\UserRepository;
@@ -13,6 +14,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\SerializedName;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Valid;
@@ -55,7 +57,17 @@ class User implements UserInterface
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
      */
+    #[ApiProperty(identifier: false)]
     private $id;
+
+    /**
+     * @ORM\Column(type="uuid", unique=true)
+     */
+    #[
+        ApiProperty(identifier: true),
+        Groups(['user:write']),
+    ]
+    private $uuid;
 
     /**
      * @ORM\Column(type="string", length=180, unique=true)
@@ -126,9 +138,10 @@ class User implements UserInterface
     #[Groups(['user:read'])]
     private $isMvp = false;
 
-    public function __construct()
+    public function __construct(string $uuid = null)
     {
         $this->cheeseListings = new ArrayCollection();
+        $this->uuid = $uuid ? Uuid::fromString($uuid) : Uuid::v4();
     }
 
     public function getId(): ?int
@@ -231,6 +244,7 @@ class User implements UserInterface
      * @return Collection<CheeseListing>
      */
     #[
+//        ApiProperty(readableLink: false), // permet d'avoir un tableau d'iri bien rangé
         Groups(['user:read']),
         SerializedName('cheeseListings')
     ]
@@ -320,4 +334,16 @@ class User implements UserInterface
     {
         $this->isMvp = $isMvp;
     }
+
+    public function getUuid()
+    {
+        return $this->uuid;
+    }
+//
+//    public function setUuid($uuid): self
+//    {
+//        $this->uuid = $uuid;
+//
+//        return $this;
+//    }
 }
