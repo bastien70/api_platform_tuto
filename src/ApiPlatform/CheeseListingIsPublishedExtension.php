@@ -26,6 +26,10 @@ class CheeseListingIsPublishedExtension implements QueryCollectionExtensionInter
     }
 
     /**
+     * Query Extension - Lors d'une requête GET (item ou collection)
+     * Si user non authentifié => add where published = true (seulement les cheese publiés)
+     * Si user authentifié => add where published = true or cheese.owner = user (tous les cheese de l'user publiés et non publiés, et les cheeses publiés des autres)
+     *
      * @param string $resourceClass
      * @param QueryBuilder $queryBuilder
      */

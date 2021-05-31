@@ -32,6 +32,7 @@ class CheeseListingDataPersister implements DataPersisterInterface
             $this->manager->persist($notification);
             $this->manager->flush();
         }
+
         $this->decoratedDataPersister->persist($data);
     }
 
