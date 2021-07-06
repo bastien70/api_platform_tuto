@@ -48,9 +48,6 @@ class UserDataProvider implements ContextAwareCollectionDataProviderInterface, R
             return null;
         }
 
-        // now handled in listener
-//        $item->setIsMe($this->security->getUser() === $item);
-
         return $item;
     }
 }

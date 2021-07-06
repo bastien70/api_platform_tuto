@@ -41,11 +41,12 @@
 
 
                 axios
-                    .post('/login', {
-                        email: this.email,
+                    .post('/api/login', {
+                        username: this.email,
                         password: this.password
                     })
                     .then(response => {
+                        console.log(response);
                         this.$emit('user-authenticated', response.headers.location);
                         this.email = '';
                         this.password = '';
